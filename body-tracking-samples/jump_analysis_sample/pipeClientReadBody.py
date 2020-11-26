@@ -23,9 +23,11 @@ import matplotlib.pyplot as plt
 #MAX_DEPTH_FOR_VIS = 8000.0
 #MAX_AB_FOR_VIS = 512.0
 
-clipFrames = 120
+clipFrames = 30
 
-runAllAsTest = False
+runAllAsTest = True
+testMIDI = False
+
 
 buffer = []
 currentdata = []
@@ -236,7 +238,7 @@ class DataHandler:
                     encode = listOfLabelNames
                     predict = model.predict(shape, clipFrames, True)[0]
 
-                    if runAllAsTest:
+                    if runAllAsTest and not testMIDI:
                         self.testManager.AppendPredictionsToTestData(predict)
 
                     print('PREDICTION:')
@@ -265,7 +267,7 @@ class DataHandler:
         print('out of while')
         if not runAllAsTest:
             win32file.CloseHandle(fileHandle)
-        else:
+        elif not testMIDI:
             self.testManager.writeHeaderToCSV(["Model Type", "#Labels", "Label", "Label test video length", "#Batch size", "Epoch", "Frames pr clip", "Date"],
                                          ["CNNLSTM", "31",  listOfLabelNames[testIndex], "20 min", "200", "400", clipFrames, "31-10-2020"])
             self.testManager.writeHeaderToCSV([],[])
@@ -305,7 +307,8 @@ if __name__ == "__main__":
     for testFileName in listOfTestNames:
         DataHandler.handleData(fileHandle, testIndex)
         testIndex += 1
-    DataHandler.WriteTotalModelPerformance()
+    if(runAllAsTest and not testMIDI):
+        DataHandler.WriteTotalModelPerformance()
 
 
 

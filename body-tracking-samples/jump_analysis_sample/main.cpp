@@ -208,6 +208,9 @@ float CalcVelGivenTwoPointsAndTime(float x1, float y1, float z1, float time1, fl
 
 }
 
+
+
+
 int64_t ReviewWindowCloseCallbackMain(void* context)
 {
 
@@ -384,8 +387,34 @@ void saveRecords(std::string nameOfClip, std::string folderToSaveToInPath) {
 }
 
 
-int numberOfFramesPrSplit = 120;
-void Load_csv(std::string filename, bool splitRecord, std::string nameOfStringClip) {
+int degreesToRotate = 0;
+int degreeesCounter = 0;
+void rotateAroundY() {
+
+    float angleInRadians = degreesToRotate * 0.0174532925; // 0.0174532925 rad = 1 degrees
+
+    for (int i = 0; i < m_listOfBodyPositions.size(); i++)
+    {
+        auto currBody = m_listOfBodyPositions[i];
+
+        //set origin x,y,z to 0, normally normalized to  0, -150, 2000 
+    //calcs: https://www.mathworks.com/matlabcentral/answers/123763-how-to-rotate-entire-3d-data-with-x-y-z-values-along-a-particular-axis-say-x-axis
+        for (int x = 0; x < 32; x++) //32 joints
+        {
+            float newX = currBody.skeleton.joints[x].position.v[0];
+            float newZ = currBody.skeleton.joints[x].position.v[2] -originBody[2]; // set origin z to 0
+
+            currBody.skeleton.joints[x].position.v[0] = (newX *cos(angleInRadians) + newZ * sin(angleInRadians));
+            currBody.skeleton.joints[x].position.v[2] = (newZ * cos(angleInRadians) + newX * sin(angleInRadians)) + originBody[2];
+        }
+        m_listOfBodyPositions[i] = currBody;
+    }
+}
+
+
+
+int numberOfFramesPrSplit = 30;
+void Load_csv(std::string filename,std::string newBehavior, std::string nameOfStringClip) {
 
     // Create an input filestream
     std::ifstream myFile(filename);
@@ -459,14 +488,50 @@ void Load_csv(std::string filename, bool splitRecord, std::string nameOfStringCl
 
             //printf("%d  Length of shit",  m_listOfBodyPositions.size());
 
-            if (splitRecord && m_listOfBodyPositions.size() == numberOfFramesPrSplit) {
-                saveRecords(nameOfStringClip, "2iter20minlabelsCl120");
+            if (newBehavior == "split" && m_listOfBodyPositions.size() == numberOfFramesPrSplit) {
+                saveRecords(nameOfStringClip, "splits30fpc");
                 printf("\nFinished a split...");
 
                 m_listOfBodyPositions.clear();
                 m_framesTimestampInUsec.clear();
             }
         }
+    }
+
+    if (newBehavior == "rotate") {
+        rotateAroundY();
+        saveRecords(nameOfStringClip, "rotatedRecords");
+        printf("\nFinished a rotate... with %d degrees", degreesToRotate);
+
+        m_listOfBodyPositions.clear();
+        m_framesTimestampInUsec.clear();
+    }
+   // rotateAroundY();
+}
+
+void RotateRecords() {
+    saveRecord = false;
+
+    int rotationAmount = 0;
+
+    printf("\nEnter an int amount of degrees to rotate:   ");
+    scanf("%d", &rotationAmount);
+    degreesToRotate = rotationAmount;
+
+    printf("\n rotating files... \n \n Files: \n");
+
+    for (const auto& entry : fs::directory_iterator(pathString + "\\records")) {
+
+        std::string s = entry.path().u8string();
+        int pos = s.find_last_of('\\');
+        std::string ss = s.substr(pos + 1);
+        std::string fileName = ss.substr(0, ss.length() - 4);
+        std::cout << fileName << "\n";
+
+        Load_csv(std::string(pathString + "records\\" + fileName + ".csv").c_str(), "rotate", fileName.substr(0, fileName.find("_")));
+
+        m_framesTimestampInUsec.clear();
+        m_listOfBodyPositions.clear();
     }
 }
 
@@ -505,9 +570,9 @@ void SplitRecords() {
 
     // CalcVelGivenTwoPointsAndTime(0, 0, 0, 0, 1000, 1000, 1000, 1000);
 
-    const int numberOfFloatsPrJoint = 225;
+    //const int numberOfFloatsPrJoint = 225;
     //                            vector pos  orientation                     timestamp
-    float str[numberOfFloatsPrJoint]; //32 vectors (body) *( ( 3(x,y,z) + 3*(x,y,z) + 1(confidence) )+ 1 (timestamp)  32 (3 * 3 + 1) +1 = 225 
+    //float str[numberOfFloatsPrJoint]; //32 vectors (body) *( ( 3(x,y,z) + 3*(x,y,z) + 1(confidence) )+ 1 (timestamp)  32 (3 * 3 + 1) +1 = 225 
 
     int fSize = 0;
         printf("\n split files... \n \n Files: \n");
@@ -521,14 +586,13 @@ void SplitRecords() {
         std::string fileName = ss.substr(0, ss.length() - 4);
         std::cout << fileName << "\n";
 
-    Load_csv(std::string(pathString + "records\\" + fileName + ".csv").c_str(), true, fileName.substr(0, fileName.find("_")));
+    Load_csv(std::string(pathString + "records\\" + fileName + ".csv").c_str(), "split", fileName.substr(0, fileName.find("_")));
 
     m_framesTimestampInUsec.clear();
     m_listOfBodyPositions.clear();
-
     }
-
 }
+
 
 void LoadFile() {
 
@@ -560,7 +624,7 @@ void LoadFile() {
     printf("\nEnter a file:   ");
     scanf("%s", input);
 
-    Load_csv(std::string(pathString + "records\\" + input + ".csv").c_str(), false, "");
+    Load_csv(std::string(pathString + "records\\" + input + ".csv").c_str(), "", "");
     /*
     
     FILE* ptr = fopen(( std::string (pathString + input + ".txt").c_str()), "r");
@@ -1112,9 +1176,9 @@ clock_t prevTime = -1;
                      //printf("Distance: %f meters", dist/1000);
                 // }
 
-
                     if (normalize) {
                         m_listOfBodyPositions.push_back(NormalizeBody(body));
+                        
                     }
 
                     else
@@ -1171,8 +1235,8 @@ clock_t prevTime = -1;
 
                 Color color = g_bodyColors[body.id % g_bodyColors.size()];
                 color.a = i == JumpEvaluationBodyIndex ? 0.8f : 0.1f;
-                if (normalize)
-                    window3d.AddBody(NormalizeBody(body), color); // HERE
+                if (normalize) 
+                    window3d.AddBody(NormalizeBody(body), color); // HERE               
 
                 else
                     window3d.AddBody(body, color); // HERE
@@ -1251,10 +1315,10 @@ k4abt_tracker_t tracker = nullptr;
 
     pathString = fs::current_path().u8string().substr(0, fs::current_path().u8string().length() - 15);
 
-    printf("Enter 'r' to run or 'l' to load file or 's' to split a record into subsets: ");
+    printf("Enter 'r' to run or 'l' to load file or 's' to split a record into subsets or i to rotate records: ");
     scanf("%c", &startInput);
 
-    if (startInput != 'r' && startInput != 'l' && startInput != 's' ) {
+    if (startInput != 'r' && startInput != 'l' && startInput != 's' && startInput != 'i') {
         return -1;
         s_isRunning = false;
     }
@@ -1264,6 +1328,12 @@ k4abt_tracker_t tracker = nullptr;
 
         LoadFile();
     }
+
+    if (startInput == 'i') {
+        s_isRunning = false;
+        RotateRecords();
+    }
+
     else if (startInput == 's'){
               s_isRunning = false;
               SplitRecords();
