@@ -1,6 +1,6 @@
 
 # NamedPipe
-import win32file
+# import win32file
 import sys
 
 import keras
@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 clipFrames = 30
 
 runAllAsTest = True
-testMIDI = False
+testMIDI = True
 
 
 buffer = []
@@ -37,17 +37,19 @@ listOfLabelNames = []
 totalModelPerformance = []
 listOfLabels =[]
 
+from GestureRecognitionML.midi.osc_interface import Player
 from GestureRecognitionML.Model.Cnn import cnn
 from GestureRecognitionML.Model.CnnLstm import cnnlstm
+
 model = cnnlstm(lr=0, bs=0, e=0, loadModel=True, split=1, f='splits120', path="GestureRecognitionML/")
 
 
 class TestManager:
     def __init__(self, labelName):
         buffer.clear()
-        self.pathToTestFiles = "testRecords\\"
-        self.path = os.path.abspath(__file__).rsplit("\\", 1)[0] + "\\"
-        self.scorePath = self.path + self.pathToTestFiles + "\\TestScore\\" + "TestScores.csv"
+        self.pathToTestFiles = "testRecords/"
+        self.path = os.path.abspath(__file__).rsplit("/", 1)[0] + "/"
+        self.scorePath = self.path + self.pathToTestFiles + "/TestScore/" + "TestScores.csv"
         self.data = self.GetData(labelName)
 
     def AppendPredictionsToTestData(self, data):
@@ -195,7 +197,9 @@ class TestManager:
 
 class DataHandler:
     def __init__(self):
+        self.liveInterface = Player(listOfLabelNames)
         self.testManager = None
+        self.liveInterface.play()
 
 
     def WriteTotalModelPerformance(self):
@@ -212,8 +216,8 @@ class DataHandler:
         while True:
             if not runAllAsTest:
                 request_msg = "Request bodyInfo"
-                win32file.WriteFile(fileHandle, request_msg.encode())
-                inputData = win32file.ReadFile(fileHandle, 1168)  # (32*6+1) * 4bytes
+                # win32file.WriteFile(fileHandle, request_msg.encode())
+                # inputData = win32file.ReadFile(fileHandle, 1168)  # (32*6+1) * 4bytes
                 data = np.frombuffer(inputData[1], dtype="float32", count=-1, offset=0)
             else:
                 print(testFileName)
@@ -246,19 +250,28 @@ class DataHandler:
                     for i in range(0, len(predict)):
                         encodedLabels.append((encode[i], predict[i]))
 
+
                     def sortByCertainty(label):
                         return -label[1]
 
                     encodedLabels.sort(key=sortByCertainty)
                     for encode in encodedLabels:
-                        print(encode)
-                    print("*********************************'")
+                        if not testMIDI:
+                            print(encode)
+                    if not testMIDI:
+                        print("*********************************'")
                     loss += (1 - predict[labelIndex])
                     if encodedLabels[0] == labelIndex:
                         acc += 1
-                    print(loss)
+                    if not testMIDI:
+                       print(loss)
+                    print(listOfLabelNames)
                 #else:
                     #print(len(buffer))
+                    self.liveInterface.updatePredictions(encodedLabels)
+                    self.liveInterface.clock()
+
+
 
             key = cv2.waitKey(1)
             if key == 27:  # Esc key to stop
@@ -266,7 +279,8 @@ class DataHandler:
 
         print('out of while')
         if not runAllAsTest:
-            win32file.CloseHandle(fileHandle)
+            print('some')
+            # win32file.CloseHandle(fileHandle)
         elif not testMIDI:
             self.testManager.writeHeaderToCSV(["Model Type", "#Labels", "Label", "Label test video length", "#Batch size", "Epoch", "Frames pr clip", "Date"],
                                          ["CNNLSTM", "31",  listOfLabelNames[testIndex], "20 min", "200", "400", clipFrames, "31-10-2020"])
@@ -282,25 +296,28 @@ if __name__ == "__main__":
 
     # Create pipe client
 
-    DataHandler = DataHandler()
-    fileHandle = None
 
     if not runAllAsTest:
-        fileHandle = win32file.CreateFile("\\\\.\\pipe\\mynamedpipe",
-            win32file.GENERIC_READ | win32file.GENERIC_WRITE,
-            0, None,
-            win32file.OPEN_EXISTING,
-            0, None)
+        pass
+        # fileHandle = win32file.CreateFile("\\\\.\\pipe\\mynamedpipe",
+        #     #win32file.GENERIC_READ | win32file.GENERIC_WRITE,
+        #     0, None,
+        #     #win32file.OPEN_EXISTING,
+        #     0, None)
 
-    filenames = listdir((os.path.abspath(__file__).rsplit("\\", 1)[0]) + "\\testRecords")
+    filenames = listdir((os.path.abspath(__file__).rsplit("/", 1)[0]) + "/testRecords")
+    filenames.sort()
     listOfTestNames = [filename for filename in filenames if filename.endswith(".csv")]
     for x in listOfTestNames:
         listOfLabelNames.append(((x.split(".")[0]).split("test")[1]))
         listOfLabels.append([])
 
-    print(listOfLabelNames)
-    print(len(listOfLabels))
+    if not testMIDI:
+        print(listOfLabelNames)
+        print(len(listOfLabels))
 
+    DataHandler = DataHandler()
+    fileHandle = None
 
 
     testIndex = 0
