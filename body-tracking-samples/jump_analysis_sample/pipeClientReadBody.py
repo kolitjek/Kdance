@@ -1,21 +1,18 @@
 
 # NamedPipe
 # import win32file
-import sys
+#import sys
 
-import keras
+#import keras
 import pandas as pd
 import csv
 import numpy as np
 import os, os.path
 from os import listdir
 
-
-from Networking import UDP
-
 # For visualization
 import cv2
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 # The image size of depth/ir
 # Assuming depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED, change it otherwise
@@ -37,16 +34,17 @@ listOfLabelNames = []
 
 totalModelPerformance = []
 listOfLabels =[]
-
+print('loading player from osc_interface...')
 from GestureRecognitionML.midi.osc_interface import Player
 #from GestureRecognitionML.midi.osc_interface import savePreset
 # savePreset()
 #from GestureRecognitionML.Model.Cnn import cnn
-#from GestureRecognitionML.Model.DenseConv1dLstm import denseConv1d
-from GestureRecognitionML.Model.CnnLstm import cnnlstm
+from GestureRecognitionML.Model.DenseConv1dLstm import denseConv1d
+print('loading model...')
+#from GestureRecognitionML.Model.CnnLstm import cnnlstm
 
-
-model = cnnlstm(lr=0, bs=0, e=0, loadModel=True, split=1, f='splits120', path="GestureRecognitionML/")
+print('init model')
+model = denseConv1d(lr=0, bs=0, e=0, loadModel=True, split=1, f='splits120', path="GestureRecognitionML/")
 
 
 class TestManager:
@@ -203,7 +201,7 @@ class TestManager:
 
 class DataHandler:
     def __init__(self):
-        self.liveInterface = Player(listOfLabelNames)
+        self.liveInterface = Player()
         self.testManager = None
         self.liveInterface.play()
 
@@ -217,7 +215,6 @@ class DataHandler:
         loss = 0
         acc = 0
         labelIndex = 0
-        self.udp = UDP()
 
         while True:
             if not runAllAsTest:
@@ -260,7 +257,6 @@ class DataHandler:
                         return -label[1]
 
                     encodedLabels.sort(key=sortByCertainty)
-                    self.udp.sender(encodedLabels, [])
 
                     for encode in encodedLabels:
                         if not testMIDI:
@@ -303,7 +299,7 @@ if __name__ == "__main__":
     # Create pipe client
 
 
-
+    print('loading data handler')
     DataHandler = DataHandler()
     fileHandle = None
 
