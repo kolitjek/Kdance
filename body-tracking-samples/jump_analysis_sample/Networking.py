@@ -5,7 +5,7 @@ import numpy as np
 
 class UDP:
     def __init__(self):
-        self.UDP_IP = "127.0.0.1"  # Should change to something like 192.168.x.x
+        self.UDP_IP = "192.168.48.67"  # Should change to something like 192.168.x.x
         self.UDP_port = 5005
 
     def sender(self, predictions=[], skeleton_data=[]):
