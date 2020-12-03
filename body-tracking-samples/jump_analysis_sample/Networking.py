@@ -4,7 +4,7 @@ import numpy as np
 
 
 class UDP:
-    UDP_IP = "192.168.99.1"  # Has to be send on the client side (sender)
+    UDP_IP = "192.168.48.67"  # Has to be manually set on the client side (sender)
     UDP_port = 5005
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 

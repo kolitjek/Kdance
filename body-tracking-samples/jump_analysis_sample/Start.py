@@ -203,6 +203,15 @@ class DataHandler:
     def WriteTotalModelPerformance(self):
         self.testManager.writeModelPerformanceToCSV()
 
+
+    def cal_moving_avg(self, data_buffer):
+        sum = np.zeros(len(data_buffer[0]), dtype=float)
+        for predictions in data_buffer:
+            sum = np.add(sum, predictions)
+        sum = sum / self.moveingAvgBufferSizer
+        return sum
+
+
     def handleData(self, filhandle, testIndex):
         self.testManager = TestManager(listOfLabelNames[testIndex])
         OldStamp = -1.
@@ -210,6 +219,8 @@ class DataHandler:
         acc = 0
         labelIndex = 0
         self.sender = Sender()
+        self.moveingAvg = []
+        self.moveingAvgBufferSizer = 3
 
         while True:
             if not runAllAsTest:
@@ -243,13 +254,17 @@ class DataHandler:
                     if runAllAsTest and not testMIDI:
                         self.testManager.AppendPredictionsToTestData(predict)
 
+
+                    self.moveingAvg.append(predict)
+                    predict = self.cal_moving_avg(self.moveingAvg)
+
                     print('PREDICTION:')
                     encodedLabels = []
                     for i in range(0, len(predict)):
                         encodedLabels.append((encode[i], predict[i]))
 
                     def sortByCertainty(label):
-                        return -label[1]
+                        return label[0]
 
                     encodedLabels.sort(key=sortByCertainty)
                     self.sender.broadcast(encodedLabels, [])
@@ -257,10 +272,13 @@ class DataHandler:
                     for encode in encodedLabels:
                         print(encode)
                     print("*********************************'")
-                    loss += (1 - predict[labelIndex])
-                    if encodedLabels[0] == labelIndex:
-                        acc += 1
-                    print(loss)
+                    if len(self.moveingAvg) > self.moveingAvgBufferSizer -1:
+                        self.moveingAvg.pop(0)
+
+                    #loss += (1 - predict[labelIndex])
+                   # if encodedLabels[0] == labelIndex:
+                       # acc += 1
+                    #print(loss)
                 #else:
                     #print(len(buffer))
 
