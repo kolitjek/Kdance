@@ -38,8 +38,12 @@ totalModelPerformance = []
 listOfLabels =[]
 
 from GestureRecognitionML.midi.osc_interface import Player
-from GestureRecognitionML.Model.Cnn import cnn
+#from GestureRecognitionML.midi.osc_interface import savePreset
+# savePreset()
+#from GestureRecognitionML.Model.Cnn import cnn
+#from GestureRecognitionML.Model.DenseConv1dLstm import denseConv1d
 from GestureRecognitionML.Model.CnnLstm import cnnlstm
+
 
 model = cnnlstm(lr=0, bs=0, e=0, loadModel=True, split=1, f='splits120', path="GestureRecognitionML/")
 
@@ -220,7 +224,7 @@ class DataHandler:
                 # inputData = win32file.ReadFile(fileHandle, 1168)  # (32*6+1) * 4bytes
                 data = np.frombuffer(inputData[1], dtype="float32", count=-1, offset=0)
             else:
-                print(testFileName)
+                # print(testFileName)
                 data = self.testManager.GetNextValue()
                 if data == None:
                     break
@@ -245,7 +249,6 @@ class DataHandler:
                     if runAllAsTest and not testMIDI:
                         self.testManager.AppendPredictionsToTestData(predict)
 
-                    print('PREDICTION:')
                     encodedLabels = []
                     for i in range(0, len(predict)):
                         encodedLabels.append((encode[i], predict[i]))
@@ -265,7 +268,6 @@ class DataHandler:
                         acc += 1
                     if not testMIDI:
                        print(loss)
-                    print(listOfLabelNames)
                 #else:
                     #print(len(buffer))
                     self.liveInterface.updatePredictions(encodedLabels)
@@ -293,7 +295,7 @@ class DataHandler:
 
 
 if __name__ == "__main__":
-
+    pass
     # Create pipe client
 
 
