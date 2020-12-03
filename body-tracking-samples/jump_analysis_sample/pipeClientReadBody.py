@@ -11,6 +11,7 @@ import os, os.path
 from os import listdir
 
 
+from Networking import UDP
 
 # For visualization
 import cv2
@@ -25,8 +26,8 @@ import matplotlib.pyplot as plt
 
 clipFrames = 30
 
-runAllAsTest = True
-testMIDI = True
+runAllAsTest = False
+testMIDI = False
 
 
 buffer = []
@@ -49,6 +50,7 @@ model = cnnlstm(lr=0, bs=0, e=0, loadModel=True, split=1, f='splits120', path="G
 
 
 class TestManager:
+
     def __init__(self, labelName):
         buffer.clear()
         self.pathToTestFiles = "testRecords/"
@@ -215,7 +217,7 @@ class DataHandler:
         loss = 0
         acc = 0
         labelIndex = 0
-
+        self.udp = UDP()
 
         while True:
             if not runAllAsTest:
@@ -258,6 +260,8 @@ class DataHandler:
                         return -label[1]
 
                     encodedLabels.sort(key=sortByCertainty)
+                    self.udp.sender(encodedLabels, [])
+
                     for encode in encodedLabels:
                         if not testMIDI:
                             print(encode)
@@ -299,6 +303,10 @@ if __name__ == "__main__":
     # Create pipe client
 
 
+
+    DataHandler = DataHandler()
+    fileHandle = None
+
     if not runAllAsTest:
         pass
         # fileHandle = win32file.CreateFile("\\\\.\\pipe\\mynamedpipe",
@@ -318,8 +326,6 @@ if __name__ == "__main__":
         print(listOfLabelNames)
         print(len(listOfLabels))
 
-    DataHandler = DataHandler()
-    fileHandle = None
 
 
     testIndex = 0
