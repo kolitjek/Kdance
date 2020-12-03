@@ -26,8 +26,8 @@ import matplotlib.pyplot as plt
 
 clipFrames = 30
 
-runAllAsTest = False
-testMIDI = False
+runAllAsTest = True
+testMIDI = True
 
 
 buffer = []
@@ -224,7 +224,7 @@ class DataHandler:
                 request_msg = "Request bodyInfo"
                 # win32file.WriteFile(fileHandle, request_msg.encode())
                 # inputData = win32file.ReadFile(fileHandle, 1168)  # (32*6+1) * 4bytes
-                data = np.frombuffer(inputData[1], dtype="float32", count=-1, offset=0)
+                # data = np.frombuffer(inputData[1], dtype="float32", count=-1, offset=0)
             else:
                 # print(testFileName)
                 data = self.testManager.GetNextValue()
