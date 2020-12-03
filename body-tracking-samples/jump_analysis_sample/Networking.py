@@ -23,6 +23,6 @@ class UDP:
 
         while True:
             data, addr = sock.recvfrom(1024)
-            #print("received message: %s" % data)
+            print("received message: %s" % data)
             res = ast.literal_eval(data.decode("utf-8"))
             return res
