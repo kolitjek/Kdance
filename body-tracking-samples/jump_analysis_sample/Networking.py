@@ -3,8 +3,7 @@ import ast
 import numpy as np
 
 class UDP:
-    UDP_IP = "192.168.0.11"  # Has to be send on the client side (sender)
-    UDP_port = 5005
+    UDP_IP = "192.168.0.11"  # Has to be send on the client side (sender)    UDP_port = 5005
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
@@ -15,6 +14,7 @@ class Sender(UDP):
 
     def broadcast(self, predictions=[], skeleton_data=[]):
         composed_list = [predictions, skeleton_data]
+        print(composed_list)
         self.sock.sendto(bytes(str(composed_list).encode('utf-8')), (self.UDP_IP, self.UDP_port))
 
 
@@ -33,6 +33,10 @@ class Receiver(UDP):
     def listen (self):
         while True:
             data, addr = self.sock.recvfrom(2048)
+<<<<<<< HEAD
 
+=======
+            # print("received message: %s" % data)
+>>>>>>> 4c1b524d8385bbf3583b30061752e9780b4fc45b
             res = ast.literal_eval(data.decode("utf-8"))
             return res

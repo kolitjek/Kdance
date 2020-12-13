@@ -12,6 +12,7 @@ from os import listdir
 
 
 from Networking import Sender
+from GestureRecognitionML.Model import Skeleton_structure
 
 # For visualization
 import cv2
@@ -203,6 +204,41 @@ class DataHandler:
     def WriteTotalModelPerformance(self):
         self.testManager.writeModelPerformanceToCSV()
 
+
+    def cal_moving_avg(self, data_buffer):
+        sum = np.zeros(len(data_buffer[0]), dtype=float)
+        for predictions in data_buffer:
+            sum = np.add(sum, predictions)
+        sum = sum / self.moveingAvgBufferSizer
+        return sum
+
+    def joint_velocity (self, joint, data, samples):
+        print("Joint buffer")
+        sum = 0
+        joint_sets = []
+        for i in range(1,samples):
+            vector = np.subtract(self.get_joint(joint, data[-i]), self.get_joint(joint, data[-i-1]))
+            print(vector)
+            sum += np.linalg.norm(vector)
+        return sum/samples
+
+    def get_joint(self, joint_index, data):
+        current_joint_index = 0
+        joint = []
+        for col in range(0, len(data[:-1])):
+            if col % 9 == 0 or col % 9 == 1 or col % 9 == 2:
+                if current_joint_index == joint_index:
+                    joint.append(data[col])
+
+            if col % 9 == 2:
+                current_joint_index += 1
+
+        print(joint_index)
+        return joint
+
+
+
+
     def handleData(self, filhandle, testIndex):
         self.testManager = TestManager(listOfLabelNames[testIndex])
         OldStamp = -1.
@@ -210,6 +246,9 @@ class DataHandler:
         acc = 0
         labelIndex = 0
         self.sender = Sender()
+        self.moveingAvg = []
+        self.moveingAvgBufferSizer = 3
+        self.sample_size = 3
 
         while True:
             if not runAllAsTest:
@@ -243,24 +282,44 @@ class DataHandler:
                     if runAllAsTest and not testMIDI:
                         self.testManager.AppendPredictionsToTestData(predict)
 
+
+                    self.moveingAvg.append(predict)
+                    predict = self.cal_moving_avg(self.moveingAvg)
+
+                    shoulder_r_vel = self.joint_velocity(Skeleton_structure.Skeleton.SHOULDER_RIGHT,rs,self.sample_size)
+                    shoulder_l_vel = self.joint_velocity(Skeleton_structure.Skeleton.SHOULDER_LEFT,rs,self.sample_size)
+                    wrist_r_vel = self.joint_velocity(Skeleton_structure.Skeleton.WRIST_RIGHT,rs,self.sample_size)
+                    wrist_l_vel = self.joint_velocity(Skeleton_structure.Skeleton.WRIST_LEFT,rs,self.sample_size)
+                    ankle_r_vel = self.joint_velocity(Skeleton_structure.Skeleton.ANKLE_RIGHT,rs,self.sample_size)
+                    ankle_l_vel = self.joint_velocity(Skeleton_structure.Skeleton.ANKLE_LEFT,rs,self.sample_size)
+
+
                     print('PREDICTION:')
                     encodedLabels = []
                     for i in range(0, len(predict)):
                         encodedLabels.append((encode[i], predict[i]))
 
                     def sortByCertainty(label):
-                        return -label[1]
+                        return label[0]
 
                     encodedLabels.sort(key=sortByCertainty)
-                    self.sender.broadcast(encodedLabels, [])
+                    self.sender.broadcast(encodedLabels, [("shoulder_r_vel", shoulder_r_vel),
+                                                          ("shoulder_l_vel", shoulder_l_vel),
+                                                          ("wrist_r_vel", wrist_r_vel),
+                                                          ("wrist_l_vel", wrist_l_vel),
+                                                          ("ankle_r_vel",ankle_r_vel),
+                                                          ("ankle_l_vel",ankle_l_vel)])
 
-                    for encode in encodedLabels:
-                        print(encode)
+                    #for encode in encodedLabels:
+                       # print(encode)
                     print("*********************************'")
-                    loss += (1 - predict[labelIndex])
-                    if encodedLabels[0] == labelIndex:
-                        acc += 1
-                    print(loss)
+                    if len(self.moveingAvg) > self.moveingAvgBufferSizer -1:
+                        self.moveingAvg.pop(0)
+
+                    #loss += (1 - predict[labelIndex])
+                   # if encodedLabels[0] == labelIndex:
+                       # acc += 1
+                    #print(loss)
                 #else:
                     #print(len(buffer))
 
