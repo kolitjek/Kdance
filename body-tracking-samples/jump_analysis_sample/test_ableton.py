@@ -50,6 +50,7 @@ class DataHandler:
         self.liveInterface = Player()
         self.testManager = None
         self.liveInterface.play()
+        self.play
 
     def handleData(self, filhandle, testIndex):
         self.testManager = TestManager(listOfLabelNames[testIndex])
